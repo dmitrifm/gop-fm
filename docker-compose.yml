@@ -1,0 +1,62 @@
+services:
+  icecast:
+    image: libretime/icecast:latest
+    container_name: gopfm-icecast
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ICECAST_SOURCE_PASSWORD: ${ICECAST_SOURCE_PASSWORD}
+      ICECAST_ADMIN_PASSWORD: ${ICECAST_ADMIN_PASSWORD}
+      ICECAST_RELAY_PASSWORD: ${ICECAST_RELAY_PASSWORD}
+      ICECAST_ADMIN_USERNAME: ${ICECAST_ADMIN_USERNAME}
+      ICECAST_ADMIN_EMAIL: ${ICECAST_ADMIN_EMAIL}
+      ICECAST_HOSTNAME: ${ICECAST_HOSTNAME}
+
+  liquidsoap:
+    build: ./liquidsoap
+    container_name: gopfm-liquidsoap
+    restart: unless-stopped
+    depends_on:
+      - icecast
+    volumes:
+      - ${MUSIC_PATH}:/music:ro
+      - ${JINGLES_PATH}:/jingles:rw
+      - ./liquidsoap/radio.liq:/radio.liq:ro
+    command: ["liquidsoap", "/radio.liq"]
+
+  tts_api:
+    build: ./tts_api
+    container_name: gopfm-tts-api
+    restart: unless-stopped
+    gpus: all
+    environment:
+      HOST: ${TTS_HOST}
+      PORT: ${TTS_PORT}
+      TTS_DEVICE: ${TTS_DEVICE}
+      TTS_PRELOAD: ${TTS_PRELOAD}
+      TTS_DEFAULT_LANGUAGE: ${TTS_DEFAULT_LANGUAGE}
+      TTS_DEFAULT_EXAGGERATION: ${TTS_DEFAULT_EXAGGERATION}
+      TTS_DEFAULT_CFG_WEIGHT: ${TTS_DEFAULT_CFG_WEIGHT}
+      TTS_DEFAULT_TEMPERATURE: ${TTS_DEFAULT_TEMPERATURE}
+      TTS_MAX_TEXT_LENGTH: ${TTS_MAX_TEXT_LENGTH}
+      TTS_VOICES_DIR: ${TTS_VOICES_DIR}
+    volumes:
+      - ./tts_api/voices:/app/voices:ro
+    ports:
+      - "${TTS_PORT}:${TTS_PORT}"
+
+  orchestrator:
+    build: ./orchestrator
+    container_name: gopfm-orchestrator
+    restart: unless-stopped
+    depends_on:
+      - tts_api
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TTS_URL: ${TTS_URL}
+      LLM_SYSTEM_PROMPT: ${LLM_SYSTEM_PROMPT}
+    volumes:
+      - ${JINGLES_PATH}:/jingles:rw
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

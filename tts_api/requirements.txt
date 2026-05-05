@@ -1,0 +1,9 @@
+chatterbox-tts>=0.1.4
+fastapi>=0.115.0
+pydantic-settings>=2.6.0
+python-multipart>=0.0.12
+ruaccent
+setuptools>=70.0.0,<81.0.0
+torch>=2.4.0
+torchaudio>=2.4.0
+uvicorn[standard]>=0.30.0

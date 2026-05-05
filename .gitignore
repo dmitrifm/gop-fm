@@ -1,0 +1,69 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments and local installs
+.venv/
+venv/
+env/
+ENV/
+.python-version
+pip-wheel-metadata/
+*.egg-info/
+build/
+dist/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Generated audio and request artifacts
+# *.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.aac
+outputs/
+tmp/
+temp/
+
+# Model and dataset caches that should stay outside git
+.cache/
+cache/
+models/
+checkpoints/
+hf_cache/
+huggingface/
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.sock
+
+# Docker and compose local overrides
+docker-compose.override.yml
+.docker/
+
+# Editors and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+#Use your own voices
+tts_api/voices/
