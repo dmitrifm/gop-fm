@@ -57,6 +57,10 @@ Parameters:
 - `seed` - optional deterministic seed if supported by the installed Chatterbox version.
 - `voice` - optional voice name; the service looks up `<voices dir>/<voice>.wav`.
 
+For Russian (`language_id=ru`), the service expands standalone numbers into
+words before synthesis, so `2025` is spoken as words instead of being passed to
+the model as raw digits.
+
 ## Local Run
 
 Use Python 3.11 or 3.12. For CUDA, install a PyTorch build that matches your

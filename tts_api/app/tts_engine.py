@@ -14,6 +14,7 @@ import torchaudio as ta
 from ruaccent import RUAccent
 
 from app.config import Settings
+from app.text_normalization import normalize_text
 
 
 class TTSEngine:
@@ -221,6 +222,7 @@ class TTSEngine:
         assert self._model is not None
 
         normalized_language_id = language_id.strip().lower()
+        text = normalize_text(text, normalized_language_id)
         if normalized_language_id.startswith("ru"):
             text = self._apply_stress(text)
 
