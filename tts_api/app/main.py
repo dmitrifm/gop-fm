@@ -25,6 +25,10 @@ from app.tts_engine import TTSEngine, resolve_voice_prompt_path
 
 settings = get_settings()
 engine = TTSEngine(settings)
+MEDIA_TYPES = {
+    "wav": "audio/wav",
+    "ogg": "audio/ogg",
+}
 
 
 @asynccontextmanager
@@ -78,10 +82,11 @@ async def synthesize(
             settings=settings,
         )
         generate = partial(
-            engine.generate_to_wav_file,
+            engine.generate_to_audio_file,
             text=payload.text,
             language_id=payload.language_id,
             output_dir=request_dir,
+            output_format=payload.output_format,
             audio_prompt_path=audio_prompt_path,
             generation_options={
                 "exaggeration": payload.exaggeration,
@@ -91,12 +96,12 @@ async def synthesize(
             },
         )
         output_path = await anyio.to_thread.run_sync(generate)
-        durable_output = _move_to_durable_temp(output_path)
+        durable_output = _move_to_durable_temp(output_path, payload.output_format)
 
     return FileResponse(
         durable_output,
-        media_type="audio/wav",
-        filename="speech.wav",
+        media_type=MEDIA_TYPES[payload.output_format],
+        filename=f"speech.{payload.output_format}",
         background=BackgroundTask(_unlink_file, durable_output),
     )
 
@@ -159,8 +164,8 @@ def _list_available_voices(voices_dir: str) -> list[str]:
     return sorted(path.stem for path in base_dir.glob("*.wav") if path.is_file())
 
 
-def _move_to_durable_temp(path: str) -> str:
-    fd, durable_path = tempfile.mkstemp(prefix="tts-response-", suffix=".wav")
+def _move_to_durable_temp(path: str, output_format: str) -> str:
+    fd, durable_path = tempfile.mkstemp(prefix="tts-response-", suffix=f".{output_format}")
     os.close(fd)
     Path(durable_path).unlink(missing_ok=True)
     shutil.move(path, durable_path)

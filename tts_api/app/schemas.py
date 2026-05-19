@@ -33,7 +33,7 @@ SUPPORTED_LANGUAGES: dict[str, str] = {
 class TTSRequest(BaseModel):
     text: str = Field(..., min_length=1)
     language_id: str = Field(default="ru")
-    output_format: Literal["wav"] = "wav"
+    output_format: Literal["wav", "ogg"] = "wav"
     exaggeration: float | None = Field(default=None, ge=0.0, le=2.0)
     cfg_weight: float | None = Field(default=None, ge=0.0, le=2.0)
     temperature: float | None = Field(default=None, ge=0.05, le=5.0)

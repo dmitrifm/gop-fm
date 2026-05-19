@@ -62,32 +62,45 @@ class TTSEngine:
         audio_prompt_path: str | None = None,
         generation_options: Mapping[str, Any] | None = None,
     ) -> str:
-        self.load()
-        assert self._model is not None
+        return self.generate_to_audio_file(
+            text=text,
+            language_id=language_id,
+            output_dir=output_dir,
+            output_format="wav",
+            audio_prompt_path=audio_prompt_path,
+            generation_options=generation_options,
+        )
 
-        normalized_language_id = language_id.strip().lower()
+    def generate_to_audio_file(
+        self,
+        *,
+        text: str,
+        language_id: str,
+        output_dir: str,
+        output_format: str,
+        audio_prompt_path: str | None = None,
+        generation_options: Mapping[str, Any] | None = None,
+    ) -> str:
+        normalized_output_format = output_format.strip().lower()
+        wav, sample_rate = self._generate_wav_tensor(
+            text=text,
+            language_id=language_id,
+            audio_prompt_path=audio_prompt_path,
+            generation_options=generation_options,
+        )
 
-        #  ВКЛЮЧАЕМ УДАРЯТЕЛЬ
-        if normalized_language_id.startswith("ru"):
-            text = self._apply_stress(text)
-
-        kwargs = {
-            "language_id": language_id,
-            "audio_prompt_path": audio_prompt_path,
-            **dict(generation_options or {}),
-        }
-        kwargs = {key: value for key, value in kwargs.items() if value is not None}
-        kwargs = self._filter_generate_kwargs(kwargs)
-
-        with self._generate_lock:
-            wav = self._model.generate(text, **kwargs)
-
-        wav = self._normalize_wav_tensor(wav)
-        sample_rate = int(getattr(self._model, "sr", 24000))
-
-        fd, path = tempfile.mkstemp(prefix="tts-", suffix=".wav", dir=output_dir)
+        fd, path = tempfile.mkstemp(
+            prefix="tts-",
+            suffix=f".{normalized_output_format}",
+            dir=output_dir,
+        )
         os.close(fd)
-        ta.save(path, wav.cpu(), sample_rate)
+        save_kwargs = {}
+        if normalized_output_format != "wav":
+            save_kwargs["format"] = normalized_output_format
+        if normalized_output_format == "ogg":
+            save_kwargs["backend"] = "soundfile"
+        ta.save(path, wav.cpu(), sample_rate, **save_kwargs)
         return path
 
     # ===================== RUACCENT =====================
@@ -195,6 +208,36 @@ class TTSEngine:
         if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in signature.parameters.values()):
             return kwargs
         return {key: value for key, value in kwargs.items() if key in signature.parameters}
+
+    def _generate_wav_tensor(
+        self,
+        *,
+        text: str,
+        language_id: str,
+        audio_prompt_path: str | None = None,
+        generation_options: Mapping[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, int]:
+        self.load()
+        assert self._model is not None
+
+        normalized_language_id = language_id.strip().lower()
+        if normalized_language_id.startswith("ru"):
+            text = self._apply_stress(text)
+
+        kwargs = {
+            "language_id": language_id,
+            "audio_prompt_path": audio_prompt_path,
+            **dict(generation_options or {}),
+        }
+        kwargs = {key: value for key, value in kwargs.items() if value is not None}
+        kwargs = self._filter_generate_kwargs(kwargs)
+
+        with self._generate_lock:
+            wav = self._model.generate(text, **kwargs)
+
+        wav = self._normalize_wav_tensor(wav)
+        sample_rate = int(getattr(self._model, "sr", 24000))
+        return wav, sample_rate
 
     @staticmethod
     def _normalize_wav_tensor(wav: torch.Tensor) -> torch.Tensor:

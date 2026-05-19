@@ -1,14 +1,14 @@
 # Chatterbox Multilingual TTS Service
 
-Python microservice that accepts text and returns a generated WAV file using
-Chatterbox Multilingual TTS. The service prefers CUDA automatically, so an
+Python microservice that accepts text and returns a generated WAV or OGG file
+using Chatterbox Multilingual TTS. The service prefers CUDA automatically, so an
 NVIDIA RTX 4060 will be used when PyTorch sees the GPU.
 
 ## API
 
 - `GET /health` - service status, CUDA availability, active device.
 - `GET /languages` - supported Chatterbox Multilingual language codes.
-- `POST /tts` - synthesize speech and return `audio/wav`.
+- `POST /tts` - synthesize speech and return `audio/wav` or `audio/ogg`.
 
 `/tts` accepts either JSON or `multipart/form-data`.
 
@@ -24,6 +24,7 @@ curl -X POST http://localhost:8005/tts \
   -d '{
     "text": "Привет. Это тест синтеза речи.",
     "language_id": "ru",
+    "output_format": "wav",
     "voice": "valera",
     "exaggeration": 0.5,
     "cfg_weight": 0.5,
@@ -38,16 +39,18 @@ Multipart example:
 curl -X POST http://localhost:8005/tts \
   -F 'text=Bonjour, ceci est un test.' \
   -F 'language_id=fr' \
+  -F 'output_format=ogg' \
   -F 'voice=sergei' \
   -F 'exaggeration=0.7' \
   -F 'cfg_weight=0.3' \
-  --output speech.wav
+  --output speech.ogg
 ```
 
 Parameters:
 
 - `text` - required input text.
 - `language_id` - language code, default `ru`.
+- `output_format` - output audio format: `wav` or `ogg`, default `wav`.
 - `exaggeration` - emotion/intensity control, default `0.5`.
 - `cfg_weight` - CFG/pacing control, default `0.5`; lower values can slow expressive speech.
 - `temperature` - sampling temperature, default `0.8`.
