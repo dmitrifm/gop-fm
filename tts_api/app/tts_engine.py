@@ -15,6 +15,7 @@ from ruaccent import RUAccent
 
 from app.config import Settings
 from app.text_normalization import normalize_text
+from app.text_separator import split
 
 
 class TTSEngine:
@@ -83,12 +84,26 @@ class TTSEngine:
         generation_options: Mapping[str, Any] | None = None,
     ) -> str:
         normalized_output_format = output_format.strip().lower()
-        wav, sample_rate = self._generate_wav_tensor(
-            text=text,
-            language_id=language_id,
-            audio_prompt_path=audio_prompt_path,
-            generation_options=generation_options,
-        )
+        
+        wav_chunks: list[torch.Tensor] = []
+
+        for text_chunk in split(text):
+            chunk_wav, sample_rate = self._generate_wav_tensor(
+                text=text_chunk,
+                language_id=language_id,
+                audio_prompt_path=audio_prompt_path,
+                generation_options=generation_options,
+            )
+
+            print(
+                f"Generated chars={len(text_chunk)}, "
+                f"shape={chunk_wav.shape}, "
+                f"device={chunk_wav.device}"
+            )
+
+            wav_chunks.append(chunk_wav.detach().cpu())
+
+        result_wav = torch.cat(wav_chunks, dim=1)
 
         fd, path = tempfile.mkstemp(
             prefix="tts-",
@@ -101,7 +116,7 @@ class TTSEngine:
             save_kwargs["format"] = normalized_output_format
         if normalized_output_format == "ogg":
             save_kwargs["backend"] = "soundfile"
-        ta.save(path, wav.cpu(), sample_rate, **save_kwargs)
+        ta.save(path, result_wav.contiguous(), sample_rate, **save_kwargs)
         return path
 
     # ===================== RUACCENT =====================
